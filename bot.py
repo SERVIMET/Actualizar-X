@@ -28,8 +28,7 @@ def extraer_dato(patron, texto, por_defecto="--"):
   return por_defecto
 
 
-# NOTA: Ajustaremos las expresiones regulares según el formato exacto del HTML de la página,
-# pero de manera general capturamos los valores clave:
+# Capturamos los valores clave del HTML
 temp_actual = extraer_dato(r"Temperatura.*?([\d\.,]+)", html_content, "12.0")
 humedad = extraer_dato(r"Humedad.*?([\d]+)", html_content, "82")
 viento_vel = extraer_dato(r"Viento.*?([\d\.,]+)", html_content, "12.8")
@@ -41,7 +40,6 @@ print(
 )
 
 # 2. Generar la imagen con Pillow
-# Asegúrate de haber subido 'fondo_talcahuano.jpg' a la raíz de tu repositorio en GitHub
 try:
   img = Image.open("fondo_talcahuano.jpg")
 except FileNotFoundError:
@@ -59,9 +57,7 @@ except:
   font_titulo = font_dato = font_texto = ImageFont.load_default()
 
 # Textos (sin tildes según tus indicaciones anteriores)
-draw.text(
-    (50, 70), "TALCAHUANO", fill=(255, 255, 255), font=font_titulo
-)  # Título de la estacion
+draw.text((50, 70), "TALCAHUANO", fill=(255, 255, 255), font=font_titulo)
 
 # Fecha y hora actual (sin tildes en los días/meses)
 ahora = datetime.now().strftime("%d de %b de %Y | %H:%M")
@@ -76,7 +72,7 @@ draw.text(
     font=font_texto,
 )
 
-# Dibujar temperatura actual como ejemplo en la tarjeta
+# Dibujar temperatura actual
 draw.text(
     (80, 250), f"{temp_actual} C", fill=(255, 255, 255), font=font_dato
 )
@@ -84,7 +80,7 @@ draw.text(
 imagen_path = "reporte_talcahuano.png"
 img.save(imagen_path)
 
-# 3. Publicar en X (Twitter) usando las credenciales seguras de GitHub Secrets
+# 3. Publicar en X (Twitter) usando Tweepy Client (API v2) y OAuth 1.0a para multimedia
 API_KEY = os.getenv("X_API_KEY")
 API_SECRET = os.getenv("X_API_SECRET")
 ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
@@ -92,15 +88,27 @@ ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
 
 if API_KEY and API_SECRET and ACCESS_TOKEN and ACCESS_TOKEN_SECRET:
   try:
+    # Cliente para la API v2 (para enviar el tuit)
+    client = tweepy.Client(
+        consumer_key=API_KEY,
+        consumer_secret=API_SECRET,
+        access_token=ACCESS_TOKEN,
+        access_token_secret=ACCESS_TOKEN_SECRET,
+    )
+
+    # API v1.1 necesaria exclusivamente para subir la imagen multimedia
     auth = tweepy.OAuth1UserHandler(
         API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET
     )
-    api = tweepy.API(auth)
+    api_v1 = tweepy.API(auth)
 
     mensaje = "Reporte meteorologico automatico - Estacion Talcahuano."
 
-    media = api.media_upload(imagen_path)
-    api.update_status(status=mensaje, media_ids=[media.media_id])
+    # Subir la imagen usando la API v1.1
+    media = api_v1.media_upload(imagen_path)
+
+    # Publicar el tuit con la imagen adjunta usando la API v2
+    client.create_tweet(text=mensaje, media_ids=[media.media_id])
     print("¡Reporte publicado con exito en X!")
   except Exception as e:
     print(f"Error al publicar en X: {e}")
