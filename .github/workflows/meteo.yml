@@ -1,0 +1,31 @@
+name: Publicar Reporte Meteo Talcahuano
+
+on:
+  schedule:
+    - cron: '0 0,6,12,18 * * *'  # Se ejecuta 4 veces al día (UTC)
+  workflow_dispatch:  # Te permite probarlo manualmente desde GitHub cuando quieras
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copiar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar librerías necesarias
+        run: |
+          pip install requests pillow tweepy
+
+      - name: Ejecutar script de reporte
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          python bot.py
